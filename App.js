@@ -28,6 +28,16 @@ const EMAILJS_SERVICE_ID = process.env.EXPO_PUBLIC_EMAILJS_SERVICE_ID;
 const EMAILJS_TEMPLATE_ID = process.env.EXPO_PUBLIC_EMAILJS_TEMPLATE_ID;
 const EMAILJS_PUBLIC_KEY = process.env.EXPO_PUBLIC_EMAILJS_PUBLIC_KEY;
 
+// Design mode: true when any .env key is missing.
+// In design mode the send is simulated, so you can work on the UI without keys.
+const HAS_KEYS = !!(
+  CLOUD_NAME &&
+  UPLOAD_PRESET &&
+  EMAILJS_SERVICE_ID &&
+  EMAILJS_TEMPLATE_ID &&
+  EMAILJS_PUBLIC_KEY
+);
+
 // Alert.alert does nothing on web, so use window.alert there
 const notify = (title, msg) =>
   Platform.OS === "web"
@@ -87,6 +97,16 @@ export default function App() {
 
     setLoading(true);
     try {
+      // Design mode: no .env keys, so fake the send
+      if (!HAS_KEYS) {
+        await new Promise((r) => setTimeout(r, 1500));
+        notify(
+          "Design mode",
+          "No .env keys found, so nothing was actually sent."
+        );
+        return;
+      }
+
       // 1. Upload screenshot to Cloudinary
       const formData = new FormData();
       if (Platform.OS === "web") {
@@ -165,6 +185,12 @@ export default function App() {
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
       >
+        {!HAS_KEYS && (
+          <Text style={styles.banner}>
+          
+          </Text>
+        )}
+
         <Text style={styles.title}>Contact support</Text>
         <Text style={styles.subtitle}>
           Tell us what went wrong and attach a screenshot.
@@ -273,6 +299,7 @@ export default function App() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: { padding: 20, paddingTop: 60, backgroundColor: "#f7f8fa" },
+  banner: { color: "#b45309", marginBottom: 8, fontSize: 13 },
   title: { fontSize: 26, fontWeight: "700", color: "#14213d" },
   subtitle: { fontSize: 14, color: "#5c677d", marginBottom: 18, marginTop: 4 },
   label: { fontSize: 14, fontWeight: "600", color: "#14213d", marginTop: 14, marginBottom: 6 },
