@@ -16,18 +16,19 @@ import * as ImagePicker from "expo-image-picker";
 import { StatusBar } from "expo-status-bar";
 
 const CATEGORIES = [
-  "Account Problem",
-  "Technical Issue",
-  "Payment Concern",
-  "Other",
+  { label: "Account Problem", icon: "👤" },
+  { label: "Technical Issue", icon: "🛠️" },
+  { label: "Payment Concern", icon: "💳" },
+  { label: "Other", icon: "💬" },
 ];
+
+const MAX_MESSAGE = 500;
 
 const CLOUD_NAME = process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME;
 const UPLOAD_PRESET = process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
 const EMAILJS_SERVICE_ID = process.env.EXPO_PUBLIC_EMAILJS_SERVICE_ID;
 const EMAILJS_TEMPLATE_ID = process.env.EXPO_PUBLIC_EMAILJS_TEMPLATE_ID;
 const EMAILJS_PUBLIC_KEY = process.env.EXPO_PUBLIC_EMAILJS_PUBLIC_KEY;
-const SUPPORT_EMAIL = process.env.EXPO_PUBLIC_SUPPORT_EMAIL;
 
 // Design mode: true when any .env key is missing.
 // In design mode the send is simulated, so you can work on the UI without keys.
@@ -44,6 +45,20 @@ const notify = (title, msg) =>
   Platform.OS === "web"
     ? window.alert(`${title}\n${msg}`)
     : Alert.alert(title, msg);
+
+// Input that highlights its border while focused
+function Field({ style, ...props }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <TextInput
+      {...props}
+      placeholderTextColor="#9aa3b5"
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      style={[styles.input, focused && styles.inputFocused, style]}
+    />
+  );
+}
 
 export default function App() {
   const [name, setName] = useState("");
@@ -147,7 +162,6 @@ export default function App() {
             template_id: EMAILJS_TEMPLATE_ID,
             user_id: EMAILJS_PUBLIC_KEY,
             template_params: {
-              to_email: SUPPORT_EMAIL,
               name: name.trim(),
               reply_to: email.trim(),
               issue_category: category,
@@ -182,171 +196,324 @@ export default function App() {
       style={styles.flex}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <StatusBar style="dark" />
+      <StatusBar style="light" />
       <ScrollView
-        contentContainerStyle={styles.container}
+        style={styles.screen}
+        contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        {!HAS_KEYS && (
-          <Text style={styles.banner}>
-          
+        {/* ---------- Hero header ---------- */}
+        <View style={styles.hero}>
+          <View style={styles.heroCircleBig} />
+          <View style={styles.heroCircleSmall} />
+          <View style={styles.heroBadge}>
+            <Text style={styles.heroBadgeText}>🎧 Support Center</Text>
+          </View>
+          <Text style={styles.title}>How can we help?</Text>
+          <Text style={styles.subtitle}>
+            Tell us what went wrong and attach a screenshot. We usually reply
+            within a day.
           </Text>
-        )}
-
-        <Text style={styles.title}>Contact support</Text>
-        <Text style={styles.subtitle}>
-          Tell us what went wrong and attach a screenshot.
-        </Text>
-
-        <Text style={styles.label}>Name</Text>
-        <TextInput
-          style={styles.input}
-          value={name}
-          onChangeText={setName}
-          placeholder="Your full name"
-          editable={!loading}
-        />
-
-        <Text style={styles.label}>Email address</Text>
-        <TextInput
-          style={styles.input}
-          value={email}
-          onChangeText={setEmail}
-          placeholder="you@example.com"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          editable={!loading}
-        />
-
-        <Text style={styles.label}>Issue category</Text>
-        <View style={styles.chips}>
-          {CATEGORIES.map((c) => (
-            <TouchableOpacity
-              key={c}
-              style={[styles.chip, category === c && styles.chipActive]}
-              onPress={() => setCategory(c)}
-              disabled={loading}
-            >
-              <Text
-                style={[
-                  styles.chipText,
-                  category === c && styles.chipTextActive,
-                ]}
-              >
-                {c}
-              </Text>
-            </TouchableOpacity>
-          ))}
         </View>
 
-        <Text style={styles.label}>Message</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          value={message}
-          onChangeText={setMessage}
-          placeholder="Describe the problem"
-          multiline
-          textAlignVertical="top"
-          editable={!loading}
-        />
-
-        <Text style={styles.label}>Screenshot</Text>
-        {imageUri ? (
-          <View>
-            <Image source={{ uri: imageUri }} style={styles.preview} />
-            <View style={styles.row}>
-              <TouchableOpacity
-                style={[styles.secondaryBtn, styles.flex]}
-                onPress={pickImage}
-                disabled={loading}
-              >
-                <Text style={styles.secondaryText}>Change</Text>
-              </TouchableOpacity>
-              <View style={styles.gap} />
-              <TouchableOpacity
-                style={[styles.secondaryBtn, styles.flex]}
-                onPress={removeImage}
-                disabled={loading}
-              >
-                <Text style={styles.secondaryText}>Remove</Text>
-              </TouchableOpacity>
+        {/* ---------- Form card ---------- */}
+        <View style={styles.card}>
+          {!HAS_KEYS && (
+            <View style={styles.banner}>
+              <Text style={styles.bannerText}>
+                🎨 Design mode: no .env found, sending is simulated.
+              </Text>
             </View>
-          </View>
-        ) : (
-          <TouchableOpacity
-            style={styles.secondaryBtn}
-            onPress={pickImage}
-            disabled={loading}
-          >
-            <Text style={styles.secondaryText}>Upload screenshot</Text>
-          </TouchableOpacity>
-        )}
-
-        <TouchableOpacity
-          style={[styles.submitBtn, loading && styles.submitDisabled]}
-          onPress={handleSubmit}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.submitText}>Send request</Text>
           )}
-        </TouchableOpacity>
+
+          <Text style={styles.label}>Name</Text>
+          <Field
+            value={name}
+            onChangeText={setName}
+            placeholder="Your full name"
+            editable={!loading}
+          />
+
+          <Text style={styles.label}>Email address</Text>
+          <Field
+            value={email}
+            onChangeText={setEmail}
+            placeholder="you@example.com"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            editable={!loading}
+          />
+
+          <Text style={styles.label}>Issue category</Text>
+          <View style={styles.chips}>
+            {CATEGORIES.map((c) => {
+              const active = category === c.label;
+              return (
+                <TouchableOpacity
+                  key={c.label}
+                  style={[styles.chip, active && styles.chipActive]}
+                  onPress={() => setCategory(c.label)}
+                  disabled={loading}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.chipIcon}>{c.icon}</Text>
+                  <Text
+                    style={[styles.chipText, active && styles.chipTextActive]}
+                  >
+                    {c.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <View style={styles.labelRow}>
+            <Text style={[styles.label, styles.labelInRow]}>Message</Text>
+            <Text style={styles.counter}>
+              {message.length}/{MAX_MESSAGE}
+            </Text>
+          </View>
+          <Field
+            style={styles.textArea}
+            value={message}
+            onChangeText={setMessage}
+            placeholder="Describe the problem"
+            multiline
+            maxLength={MAX_MESSAGE}
+            textAlignVertical="top"
+            editable={!loading}
+          />
+
+          <Text style={styles.label}>Screenshot</Text>
+          {imageUri ? (
+            <View>
+              <Image source={{ uri: imageUri }} style={styles.preview} />
+              <View style={styles.row}>
+                <TouchableOpacity
+                  style={[styles.secondaryBtn, styles.flex]}
+                  onPress={pickImage}
+                  disabled={loading}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.secondaryText}>🔄 Change</Text>
+                </TouchableOpacity>
+                <View style={styles.gap} />
+                <TouchableOpacity
+                  style={[styles.dangerBtn, styles.flex]}
+                  onPress={removeImage}
+                  disabled={loading}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.dangerText}>🗑️ Remove</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.dropzone}
+              onPress={pickImage}
+              disabled={loading}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.dropIcon}>📷</Text>
+              <Text style={styles.dropTitle}>Upload screenshot</Text>
+              <Text style={styles.dropHint}>Tap to choose an image</Text>
+            </TouchableOpacity>
+          )}
+
+          <TouchableOpacity
+            style={[styles.submitBtn, loading && styles.submitDisabled]}
+            onPress={handleSubmit}
+            disabled={loading}
+            activeOpacity={0.85}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.submitText}>Send request  ➤</Text>
+            )}
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
+const PRIMARY = "#6d28d9"; // violet
+const PRIMARY_DARK = "#4c1d95";
+const PRIMARY_SOFT = "#ede9fe";
+const INK = "#1e1b4b";
+const MUTED = "#6b7280";
+const BORDER = "#e5e7eb";
+
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  container: { padding: 20, paddingTop: 60, backgroundColor: "#f7f8fa" },
-  banner: { color: "#b45309", marginBottom: 8, fontSize: 13 },
-  title: { fontSize: 26, fontWeight: "700", color: "#14213d" },
-  subtitle: { fontSize: 14, color: "#5c677d", marginBottom: 18, marginTop: 4 },
-  label: { fontSize: 14, fontWeight: "600", color: "#14213d", marginTop: 14, marginBottom: 6 },
-  input: {
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#d0d5dd",
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 15,
+  screen: { backgroundColor: "#f5f3ff" },
+  scrollContent: { paddingBottom: 40 },
+
+  // Hero
+  hero: {
+    backgroundColor: PRIMARY_DARK,
+    paddingTop: 70,
+    paddingHorizontal: 24,
+    paddingBottom: 90,
+    borderBottomLeftRadius: 36,
+    borderBottomRightRadius: 36,
+    overflow: "hidden",
   },
-  textArea: { height: 110 },
+  heroCircleBig: {
+    position: "absolute",
+    top: -60,
+    right: -50,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: PRIMARY,
+    opacity: 0.55,
+  },
+  heroCircleSmall: {
+    position: "absolute",
+    bottom: -30,
+    left: -30,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: "#a78bfa",
+    opacity: 0.25,
+  },
+  heroBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(255,255,255,0.18)",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    marginBottom: 14,
+  },
+  heroBadgeText: { color: "#fff", fontSize: 13, fontWeight: "600" },
+  title: { fontSize: 32, fontWeight: "800", color: "#fff" },
+  subtitle: { fontSize: 15, color: "#ddd6fe", marginTop: 8, lineHeight: 22 },
+
+  // Card
+  card: {
+    backgroundColor: "#fff",
+    marginHorizontal: 16,
+    marginTop: -56,
+    borderRadius: 24,
+    padding: 20,
+    shadowColor: "#4c1d95",
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 8,
+  },
+  banner: {
+    backgroundColor: "#fef3c7",
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginBottom: 6,
+  },
+  bannerText: { color: "#92400e", fontSize: 13, fontWeight: "600" },
+
+  // Labels and inputs
+  label: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: INK,
+    marginTop: 18,
+    marginBottom: 8,
+    letterSpacing: 0.3,
+    textTransform: "uppercase",
+  },
+  labelRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+  },
+  labelInRow: { marginBottom: 8 },
+  counter: { fontSize: 12, color: MUTED, marginBottom: 8 },
+  input: {
+    backgroundColor: "#faf9ff",
+    borderWidth: 1.5,
+    borderColor: BORDER,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    fontSize: 15,
+    color: INK,
+  },
+  inputFocused: { borderColor: PRIMARY, backgroundColor: "#fff" },
+  textArea: { height: 120 },
+
+  // Category chips
   chips: { flexDirection: "row", flexWrap: "wrap" },
   chip: {
-    borderWidth: 1,
-    borderColor: "#d0d5dd",
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: BORDER,
     backgroundColor: "#fff",
-    borderRadius: 20,
-    paddingVertical: 8,
+    borderRadius: 24,
+    paddingVertical: 10,
     paddingHorizontal: 14,
     marginRight: 8,
     marginBottom: 8,
   },
-  chipActive: { backgroundColor: "#1d4ed8", borderColor: "#1d4ed8" },
-  chipText: { color: "#14213d", fontSize: 14 },
+  chipActive: { backgroundColor: PRIMARY, borderColor: PRIMARY },
+  chipIcon: { fontSize: 14, marginRight: 6 },
+  chipText: { color: INK, fontSize: 14, fontWeight: "600" },
   chipTextActive: { color: "#fff" },
-  preview: { width: "100%", height: 220, borderRadius: 8, marginBottom: 10, resizeMode: "cover" },
+
+  // Screenshot
+  dropzone: {
+    borderWidth: 2,
+    borderStyle: "dashed",
+    borderColor: "#c4b5fd",
+    backgroundColor: PRIMARY_SOFT,
+    borderRadius: 16,
+    paddingVertical: 28,
+    alignItems: "center",
+  },
+  dropIcon: { fontSize: 32, marginBottom: 6 },
+  dropTitle: { color: PRIMARY, fontSize: 16, fontWeight: "700" },
+  dropHint: { color: MUTED, fontSize: 13, marginTop: 2 },
+  preview: {
+    width: "100%",
+    height: 220,
+    borderRadius: 16,
+    marginBottom: 12,
+    resizeMode: "cover",
+  },
   row: { flexDirection: "row" },
   gap: { width: 10 },
   secondaryBtn: {
-    borderWidth: 1,
-    borderColor: "#1d4ed8",
-    borderRadius: 8,
-    padding: 12,
+    backgroundColor: PRIMARY_SOFT,
+    borderRadius: 12,
+    paddingVertical: 13,
     alignItems: "center",
   },
-  secondaryText: { color: "#1d4ed8", fontWeight: "600" },
-  submitBtn: {
-    backgroundColor: "#1d4ed8",
-    borderRadius: 8,
-    padding: 15,
+  secondaryText: { color: PRIMARY, fontWeight: "700" },
+  dangerBtn: {
+    backgroundColor: "#fee2e2",
+    borderRadius: 12,
+    paddingVertical: 13,
     alignItems: "center",
-    marginTop: 24,
-    marginBottom: 40,
+  },
+  dangerText: { color: "#b91c1c", fontWeight: "700" },
+
+  // Submit
+  submitBtn: {
+    backgroundColor: PRIMARY,
+    borderRadius: 16,
+    paddingVertical: 17,
+    alignItems: "center",
+    marginTop: 28,
+    shadowColor: PRIMARY,
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
   },
   submitDisabled: { opacity: 0.6 },
-  submitText: { color: "#fff", fontWeight: "700", fontSize: 16 },
+  submitText: { color: "#fff", fontWeight: "800", fontSize: 17, letterSpacing: 0.3 },
 });
